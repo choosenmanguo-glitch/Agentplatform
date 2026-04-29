@@ -1,0 +1,6 @@
+{
+  "name": "统一资源管理平台",
+  "description": "基于四级权限模型与全局可见性策略的智能体及底层资源统一管理系统，支持极简审批流与全量权限审计。",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
