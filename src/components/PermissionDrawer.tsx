@@ -78,6 +78,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [transferSearch, setTransferSearch] = useState('');
   const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
+  const [transferConfirmLogin, setTransferConfirmLogin] = useState('');
 
   const potentialRecipients = [
     { name: '李四', dept: '系统架构部', login: 'lisi_arch', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka' },
@@ -633,13 +634,27 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
         <Modal
           title="所有权转移"
           open={isTransferModalOpen}
-          onCancel={() => setIsTransferModalOpen(false)}
+          onCancel={() => {
+            setIsTransferModalOpen(false);
+            setSelectedRecipient(null);
+            setTransferConfirmLogin('');
+          }}
           footer={[
             <Button key="back" onClick={() => setIsTransferModalOpen(false)}>取消</Button>,
-            <Button key="submit" type="primary" danger onClick={() => {
-              message.success('所有权转移申请已提交，需超级管理员审批');
-              setIsTransferModalOpen(false);
-            }}>确认转移</Button>
+            <Button 
+              key="submit" 
+              type="primary" 
+              danger 
+              disabled={!selectedRecipient || transferConfirmLogin !== selectedRecipient.login}
+              onClick={() => {
+                message.success('所有权转移申请已提交，需超级管理员审批');
+                setIsTransferModalOpen(false);
+                setSelectedRecipient(null);
+                setTransferConfirmLogin('');
+              }}
+            >
+              确认转移
+            </Button>
           ]}
         >
           <Space orientation="vertical" style={{ width: '100%' }} size={24}>
@@ -653,11 +668,48 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                 <Select
                   showSearch
                   placeholder="搜索内部用户..."
-                  options={potentialRecipients.map(u => ({ value: u.login, label: u.name }))}
+                  value={selectedRecipient?.login}
+                  onSelect={(value) => {
+                    const recipient = potentialRecipients.find(u => u.login === value);
+                    setSelectedRecipient(recipient);
+                  }}
+                  filterOption={(input, option) => 
+                    (option?.label as string || '').toLowerCase().includes(input.toLowerCase()) ||
+                    (option?.value as string || '').toLowerCase().includes(input.toLowerCase()) ||
+                    (option?.dept as string || '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={potentialRecipients.map(u => ({
+                    value: u.login,
+                    label: u.name,
+                    dept: u.dept,
+                    display: (
+                      <Space>
+                        <Avatar src={u.avatar} size="small" />
+                        <div>
+                          <div>{u.name} <Text type="secondary" style={{ fontSize: '12px' }}>@{u.login}</Text></div>
+                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>{u.dept}</div>
+                        </div>
+                      </Space>
+                    )
+                  }))}
+                  optionRender={(option) => (option.data as any).display}
                 />
               </Form.Item>
               <Form.Item label="转移备注">
                 <TextArea rows={2} placeholder="请说明转移原因..." />
+              </Form.Item>
+              <Form.Item 
+                label="确认接收人账号" 
+                required 
+                extra={selectedRecipient ? `请输入 "${selectedRecipient.login}" 以确认` : '请先选择接收人'}
+                validateStatus={selectedRecipient && transferConfirmLogin && transferConfirmLogin !== selectedRecipient.login ? 'error' : ''}
+              >
+                <Input 
+                  placeholder="请输入接收人的登录账号以确认" 
+                  value={transferConfirmLogin}
+                  onChange={e => setTransferConfirmLogin(e.target.value)}
+                  disabled={!selectedRecipient}
+                />
               </Form.Item>
             </Form>
           </Space>
