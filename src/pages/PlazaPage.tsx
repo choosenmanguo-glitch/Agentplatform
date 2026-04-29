@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import dayjs from 'dayjs';
 import { 
   Typography, Input, Space, Button, Avatar, Card,
   Tabs, Checkbox, Tag, Modal, Form, DatePicker, App as AntdApp
@@ -9,8 +10,9 @@ import {
   SearchOutlined, SettingOutlined,
   LineChartOutlined, DatabaseOutlined, CodeOutlined,
   NodeIndexOutlined, FileTextOutlined, ShareAltOutlined,
-  CheckCircleOutlined, ClockCircleOutlined
+  CheckCircleOutlined, ClockCircleOutlined, ArrowLeftOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Resource, VisibilityMode, PermissionLevel } from '../types';
 import { mockResources } from '../mockData';
@@ -33,6 +35,7 @@ const typeIcons: Record<string, React.ReactNode> = {
 const plazaTabs = ['模型', '知识库', '工具', '自定义API', 'MCP', '工作流', '数据源', '文件库', '知识图谱'];
 
 export default function PlazaPage() {
+  const navigate = useNavigate();
   const { message } = AntdApp.useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [activePlazaTab, setActivePlazaTab] = useState<string>('模型');
@@ -85,9 +88,13 @@ export default function PlazaPage() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
+      style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24, alignItems: 'center' }}>
-        <Title level={4} style={{ margin: 0 }}>资源广场</Title>
+        <Space size={24}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} type="text" />
+          <Title level={4} style={{ margin: 0 }}>资源广场</Title>
+        </Space>
         <Button icon={<SettingOutlined />} />
       </div>
 
@@ -196,7 +203,10 @@ export default function PlazaPage() {
         <Form layout="vertical">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <Form.Item label="预期失效日期">
-              <DatePicker style={{ width: '100%' }} />
+              <DatePicker 
+                style={{ width: '100%' }} 
+                disabledDate={(current) => current && current.isBefore(dayjs().startOf('day'))}
+              />
             </Form.Item>
             <Form.Item label=" ">
               <Checkbox>永久有效</Checkbox>

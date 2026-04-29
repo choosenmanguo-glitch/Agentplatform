@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import dayjs from 'dayjs';
 import { 
   Drawer, Tabs, Table, Select, Input, Button, Avatar, 
   Space, Tag, Badge, Modal, Form, DatePicker,
   Typography, Empty, Tooltip, Alert, Popconfirm,
-  ConfigProvider, Radio, Card, App as AntdApp, Dropdown, Menu, Checkbox
+  ConfigProvider, Radio, Card, App as AntdApp, Dropdown, Menu, Checkbox, Flex
 } from 'antd';
 import { 
   SettingOutlined, UserOutlined, FileTextOutlined, 
@@ -16,7 +17,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Resource, VisibilityMode, PermissionLevel, 
-  PermissionMember, ApprovalRequest 
+  PermissionMember, ApprovalRequest, ObjectType 
 } from '../types';
 import { mockMembers, mockApprovals, mockAuditLogs } from '../mockData';
 
@@ -45,6 +46,11 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
   const [mode, setMode] = useState<VisibilityMode>(resource?.visibilityMode || VisibilityMode.PUBLIC_VISIBLE);
   const [members, setMembers] = useState<PermissionMember[]>(mockMembers);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>(mockApprovals);
+  
+  // Filtering state for members
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [permissionLevelFilter, setPermissionLevelFilter] = useState<PermissionLevel | null>(null);
+  const [objectTypeFilter, setObjectTypeFilter] = useState<ObjectType | null>(null);
   
   // Selection state for batch operations
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -94,6 +100,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
         name: user.name,
         role: user.dept,
         department: user.dept,
+        objectType: ObjectType.PERSON,
         level: PermissionLevel.USE,
         avatar: user.avatar,
       };
@@ -129,6 +136,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
       name: request.userName,
       avatar: request.userAvatar,
       role: '申请人',
+      objectType: ObjectType.PERSON,
       level: approvalConfig.level,
       expiryDate: approvalConfig.expiry || undefined
     };
@@ -160,15 +168,33 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
       title: '授权对象',
       dataIndex: 'name',
       key: 'name',
-      render: (_: string, record: PermissionMember) => (
-        <Space>
-          <Avatar src={record.avatar} size="small" />
-          <div>
-            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{record.name}</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>{record.department || record.role}</div>
-          </div>
-        </Space>
-      ),
+      render: (_: string, record: PermissionMember) => {
+        if (record.objectType === ObjectType.DEPARTMENT || record.objectType === ObjectType.POSITION) {
+          return <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{record.name}</span>;
+        }
+        return (
+          <Space>
+            <Avatar src={record.avatar} size="small" />
+            <div>
+              <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{record.name}</div>
+              <div style={{ fontSize: '11px', color: '#94a3b8' }}>{record.department || record.role}</div>
+            </div>
+          </Space>
+        );
+      },
+    },
+    {
+      title: '对象类型',
+      dataIndex: 'objectType',
+      key: 'objectType',
+      render: (type: ObjectType) => {
+        const colorMap = {
+          [ObjectType.PERSON]: 'blue',
+          [ObjectType.DEPARTMENT]: 'cyan',
+          [ObjectType.POSITION]: 'orange',
+        };
+        return <Tag color={colorMap[type]}>{type}</Tag>;
+      }
     },
     {
       title: '权限级别',
@@ -198,16 +224,26 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
         const isOwner = record.level === PermissionLevel.OWNER;
         if (isOwner) return <Text type="secondary">-</Text>;
         
+        const now = dayjs().startOf('day');
+        const expiry = date ? dayjs(date) : null;
+        const isExpired = expiry && expiry.isBefore(now);
+
         return (
-          <DatePicker
-            variant="borderless"
-            placeholder="永久有效"
-            defaultValue={date ? undefined : undefined} 
-            onChange={(_, dateString) => {
-              setMembers(prev => prev.map(m => m.id === record.id ? { ...m, expiryDate: dateString as string } : m));
-              message.success('有效期已更新');
-            }}
-          />
+          <Tooltip title={isExpired ? `已于 ${date} 到期` : date ? `到期时间: ${date}` : '永久有效'}>
+            <DatePicker
+              variant="borderless"
+              placeholder={isExpired ? "已过期" : "永久有效"}
+              value={date ? dayjs(date) : null}
+              status={isExpired ? 'error' : undefined}
+              disabledDate={(current) => {
+                return current && current.isBefore(dayjs().startOf('day'));
+              }}
+              onChange={(_, dateString) => {
+                setMembers(prev => prev.map(m => m.id === record.id ? { ...m, expiryDate: dateString as string } : m));
+                message.success('有效期已更新');
+              }}
+            />
+          </Tooltip>
         );
       },
     },
@@ -257,12 +293,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
       }}
     >
       <Drawer
-        title={
-          <Space>
-            <SafetyCertificateOutlined style={{ color: '#2563eb' }} />
-            <span style={{ fontSize: '20px', fontWeight: 'bold' }}>{resource.name}-权限管理</span>
-          </Space>
-        }
+        title="权限管理"
         placement="right"
         onClose={onClose}
         open={isOpen}
@@ -381,7 +412,30 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
               children: (
                 <div style={{ padding: '24px', background: '#f8fafc', minHeight: '100%' }}>
                   <Space orientation="vertical" style={{ width: '100%' }} size={24}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Space size={12}>
+                        <Input
+                          placeholder="搜索已添加对象..."
+                          prefix={<SearchOutlined />}
+                          style={{ width: 200 }}
+                          value={memberSearchQuery}
+                          onChange={e => setMemberSearchQuery(e.target.value)}
+                        />
+                        <Select
+                          placeholder="权限级别"
+                          allowClear
+                          style={{ width: 120 }}
+                          onChange={setPermissionLevelFilter}
+                          options={Object.values(PermissionLevel).map(v => ({ label: v, value: v }))}
+                        />
+                        <Select
+                          placeholder="对象类型"
+                          allowClear
+                          style={{ width: 120 }}
+                          onChange={setObjectTypeFilter}
+                          options={Object.values(ObjectType).map(v => ({ label: v, value: v }))}
+                        />
+                      </Space>
                       <Button 
                         type="primary" 
                         size="large" 
@@ -427,7 +481,12 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                         }),
                       }}
                       columns={columns}
-                      dataSource={members}
+                      dataSource={members.filter(m => {
+                        const matchesSearch = m.name.toLowerCase().includes(memberSearchQuery.toLowerCase());
+                        const matchesPermission = !permissionLevelFilter || m.level === permissionLevelFilter;
+                        const matchesType = !objectTypeFilter || m.objectType === objectTypeFilter;
+                        return matchesSearch && matchesPermission && matchesType;
+                      })}
                       rowKey="id"
                       pagination={false}
                       style={{ background: 'white', borderRadius: '12px', overflow: 'hidden' }}
@@ -488,7 +547,11 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                                          />
                                        </Form.Item>
                                        <Form.Item label="设定失效日期">
-                                         <DatePicker style={{ width: '100%' }} onChange={(_, s) => setApprovalConfig(prev => ({ ...prev, expiry: s as string }))} />
+                                         <DatePicker 
+                                            style={{ width: '100%' }} 
+                                            disabledDate={(current) => current && current.isBefore(dayjs().startOf('day'))}
+                                            onChange={(_, s) => setApprovalConfig(prev => ({ ...prev, expiry: s as string }))} 
+                                          />
                                        </Form.Item>
                                      </div>
                                    </Form>
@@ -816,10 +879,11 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
         >
           <div style={{ padding: '16px 0' }}>
             <div style={{ marginBottom: '16px' }}>请为选中的 {selectedRowKeys.length} 个对象设置到期日期：</div>
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Flex vertical gap={8} style={{ width: '100%' }}>
               <DatePicker
                 style={{ width: '100%' }}
                 disabled={isPermanent}
+                disabledDate={(current) => current && current.isBefore(dayjs().startOf('day'))}
                 onChange={(_, dateString) => setBatchExpiryDate(dateString as string)}
                 placeholder="选择到期日期"
               />
@@ -829,7 +893,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
               >
                 永久有效
               </Checkbox>
-            </Space>
+            </Flex>
           </div>
         </Modal>
 

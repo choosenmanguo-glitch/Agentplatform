@@ -1,4 +1,4 @@
-import { Resource, VisibilityMode, PermissionLevel, PermissionMember, ApprovalRequest, AuditLog } from './types';
+import { Resource, VisibilityMode, PermissionLevel, PermissionMember, ApprovalRequest, AuditLog, ObjectType } from './types';
 
 export const mockResources: Resource[] = [
   {
@@ -90,9 +90,12 @@ export const mockResources: Resource[] = [
 ];
 
 export const mockMembers: PermissionMember[] = [
-  { id: 'm1', name: '张三', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix', role: '所有权人', department: '总裁办', level: PermissionLevel.OWNER },
-  { id: 'm2', name: '李四', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka', role: '系统工程师', department: '系统架构部', level: PermissionLevel.MANAGE },
-  { id: 'm3', name: '赵六', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=George', role: '数据分析师', department: '运营推广部', level: PermissionLevel.USE, expiryDate: '2025-12-31' },
+  { id: 'm1', name: '张三', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix', role: '所有权人', department: '总裁办', objectType: ObjectType.PERSON, level: PermissionLevel.OWNER },
+  { id: 'm2', name: '李四', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka', role: '系统工程师', department: '系统架构部', objectType: ObjectType.PERSON, level: PermissionLevel.MANAGE },
+  { id: 'm3', name: '赵六', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=George', role: '数据分析师', department: '运营推广部', objectType: ObjectType.PERSON, level: PermissionLevel.USE, expiryDate: '2025-12-31' },
+  { id: 'm6', name: '王五', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Vance', role: '前端架构师', department: '平台开发部', objectType: ObjectType.PERSON, level: PermissionLevel.USE, expiryDate: '2023-01-01' },
+  { id: 'm4', name: '财务部', avatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=Finance', role: '全员授权', objectType: ObjectType.DEPARTMENT, level: PermissionLevel.USE },
+  { id: 'm5', name: '首席架构师', avatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=Architect', role: '核心岗位', objectType: ObjectType.POSITION, level: PermissionLevel.MANAGE },
 ];
 
 export const mockApprovals: ApprovalRequest[] = [

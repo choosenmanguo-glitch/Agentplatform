@@ -5,6 +5,12 @@ export enum PermissionLevel {
   OWNER = '所有权',
 }
 
+export enum ObjectType {
+  PERSON = '个人',
+  DEPARTMENT = '部门',
+  POSITION = '岗位',
+}
+
 export enum VisibilityMode {
   FULLY_PUBLIC = '完全公开',
   PUBLIC_VISIBLE = '公开可见，授权可用',
@@ -35,6 +41,7 @@ export interface PermissionMember {
   avatar: string;
   role: string;
   department?: string; // Add department
+  objectType: ObjectType;
   level: PermissionLevel;
   expiryDate?: string;
 }

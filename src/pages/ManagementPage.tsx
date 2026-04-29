@@ -8,8 +8,9 @@ import {
   PlusOutlined, SearchOutlined, SafetyCertificateOutlined,
   LineChartOutlined, DatabaseOutlined, CodeOutlined,
   NodeIndexOutlined, FileTextOutlined, ShareAltOutlined,
-  SettingOutlined
+  SettingOutlined, ArrowLeftOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Resource, VisibilityMode, PermissionLevel } from '../types';
 import { mockResources } from '../mockData';
@@ -30,6 +31,7 @@ const typeIcons: Record<string, React.ReactNode> = {
 };
 
 export default function ManagementPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -56,9 +58,11 @@ export default function ManagementPage() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
+      style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24, alignItems: 'center' }}>
         <Space size={24}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} type="text" />
           <Title level={4} style={{ margin: 0 }}>资源管理</Title>
           <Input
             placeholder="搜索资源名称、标签或ID..."
