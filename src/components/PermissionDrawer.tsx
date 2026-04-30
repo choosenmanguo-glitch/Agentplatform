@@ -4,15 +4,17 @@ import {
   Drawer, Tabs, Table, Select, Input, Button, Avatar, 
   Space, Tag, Badge, Modal, Form, DatePicker,
   Typography, Empty, Tooltip, Alert, Popconfirm,
-  ConfigProvider, Radio, Card, App as AntdApp, Dropdown, Menu, Checkbox, Flex
+  ConfigProvider, Radio, Card, App as AntdApp, Dropdown, Menu, Checkbox, Flex, Tree, Switch
 } from 'antd';
+import type { TreeProps } from 'antd';
 import { 
   SettingOutlined, UserOutlined, FileTextOutlined, 
   HistoryOutlined, SafetyCertificateOutlined, SearchOutlined,
   UserAddOutlined, DeleteOutlined, SwapOutlined,
   CalendarOutlined, CheckCircleOutlined, CloseCircleOutlined,
   InfoCircleOutlined, UnlockOutlined, EyeOutlined,
-  LockOutlined, ExclamationCircleOutlined, ArrowRightOutlined
+  LockOutlined, ExclamationCircleOutlined, ArrowRightOutlined,
+  FolderOutlined, ApartmentOutlined, DatabaseOutlined
 } from '@ant-design/icons';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -85,6 +87,8 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
   const [transferSearch, setTransferSearch] = useState('');
   const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
   const [transferConfirmLogin, setTransferConfirmLogin] = useState('');
+  const [isKnowledgeDrawerOpen, setIsKnowledgeDrawerOpen] = useState(false);
+  const [isKnowledgePermissionEnabled, setIsKnowledgePermissionEnabled] = useState(false);
 
   const potentialRecipients = [
     { name: '李四', dept: '系统架构部', login: 'lisi_arch', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka' },
@@ -396,7 +400,59 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                       </Space>
                     </Radio.Group>
 
-
+                    {mode === VisibilityMode.FULLY_AUTHORIZED && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{ width: '100%', marginTop: '8px' }}
+                      >
+                        <div 
+                          style={{ 
+                            padding: '12px 16px',
+                            background: 'white',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '10px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            transition: 'all 0.2s',
+                            opacity: isKnowledgePermissionEnabled ? 1 : 0.8
+                          }}
+                          className={isKnowledgePermissionEnabled ? "hover:border-blue-400 hover:shadow-sm" : ""}
+                        >
+                          <Space size={12}>
+                            <ApartmentOutlined style={{ color: isKnowledgePermissionEnabled ? '#2563eb' : '#94a3b8', fontSize: '18px' }} />
+                            <div>
+                              <Space size={4} align="center">
+                                <div style={{ fontSize: '13px', fontWeight: '500', color: isKnowledgePermissionEnabled ? '#1e293b' : '#64748b' }}>
+                                  配置知识目录权限
+                                </div>
+                                <Tooltip title="若开启知识目录权限控制，可能会导致拥有知识库权限的用户提问/访问不到知识库中的某个文件夹。">
+                                  <InfoCircleOutlined style={{ color: '#94a3b8', fontSize: '12px', cursor: 'help' }} />
+                                </Tooltip>
+                              </Space>
+                              <div style={{ fontSize: '12px', color: '#94a3b8' }}>用于精细化设置各级文件目录的权限</div>
+                            </div>
+                          </Space>
+                          
+                          <Space size={12}>
+                            <Switch 
+                              size="small" 
+                              checked={isKnowledgePermissionEnabled}
+                              onChange={(val) => setIsKnowledgePermissionEnabled(val)}
+                            />
+                            {isKnowledgePermissionEnabled && (
+                              <Button 
+                                type="link" 
+                                size="small"
+                                icon={<ArrowRightOutlined />}
+                                onClick={() => setIsKnowledgeDrawerOpen(true)}
+                              />
+                            )}
+                          </Space>
+                        </div>
+                      </motion.div>
+                    )}
                   </Space>
                 </div>
               )
@@ -966,7 +1022,265 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
             </Space>
           )}
         </Modal>
+
+        {/* New Drawer: Knowledge Catalog Permission Settings */}
+        <Drawer
+          title={
+            <Space>
+              <ApartmentOutlined style={{ color: '#2563eb' }} />
+              <span>知识目录权限设置</span>
+            </Space>
+          }
+          size="large"
+          onClose={() => setIsKnowledgeDrawerOpen(false)}
+          open={isKnowledgeDrawerOpen}
+          styles={{
+            body: { padding: 0 }
+          }}
+        >
+          <KnowledgeCatalogPermissionManager 
+            knowledgeBaseName={resource.name}
+            allMembers={members}
+          />
+        </Drawer>
       </Drawer>
     </ConfigProvider>
+  );
+}
+
+// Inner component for Knowledge Catalog Permission Management
+function KnowledgeCatalogPermissionManager({ knowledgeBaseName, allMembers }: { knowledgeBaseName: string, allMembers: PermissionMember[] }) {
+  const [selectedNodeKey, setSelectedNodeKey] = useState<string>('root');
+  const [nodePermissions, setNodePermissions] = useState<Record<string, { mode: 'inherit' | 'separate', members: PermissionMember[] }>>({});
+
+  const separateNodesCount = Object.values(nodePermissions).filter((p: any) => p.mode === 'separate').length;
+
+  const getIconStyle = (key: string) => {
+    const config = nodePermissions[key];
+    const isSeparate = config && config.mode === 'separate';
+    return { color: isSeparate ? '#faad14' : '#52c41a' };
+  };
+
+  const treeData = [
+    {
+      title: knowledgeBaseName,
+      key: 'root',
+      icon: <DatabaseOutlined style={getIconStyle('root')} />,
+      children: [
+        { title: '产品研发部', key: 'dept-rd', icon: <FolderOutlined style={getIconStyle('dept-rd')} /> },
+        { 
+          title: '公共文档', 
+          key: 'public-docs', 
+          icon: <FolderOutlined style={getIconStyle('public-docs')} />,
+          children: [
+            { title: '管理流程', key: 'process', icon: <FolderOutlined style={getIconStyle('process')} /> },
+            { title: '文档模板', key: 'template', icon: <FolderOutlined style={getIconStyle('template')} /> },
+          ]
+        },
+        { title: '敏感资料', key: 'sensitive', icon: <FolderOutlined style={getIconStyle('sensitive')} /> },
+      ],
+    },
+  ];
+
+  // Filtering personnel who have USE or above permission on the knowledge base
+  const inheritedMembers = allMembers.filter(m => 
+    m.level === PermissionLevel.USE || 
+    m.level === PermissionLevel.MANAGE || 
+    m.level === PermissionLevel.OWNER
+  );
+
+  const currentNodeConfig = nodePermissions[selectedNodeKey] || { mode: 'inherit', members: [] };
+
+  const onSelect: TreeProps['onSelect'] = (selectedKeys) => {
+    if (selectedKeys.length > 0) {
+      setSelectedNodeKey(selectedKeys[0] as string);
+    }
+  };
+
+  const columns = [
+    {
+      title: '授权对象',
+      dataIndex: 'name',
+      render: (_: any, record: PermissionMember) => (
+        <Space>
+          <Avatar src={record.avatar} size="small" />
+          <Text>{record.name}</Text>
+        </Space>
+      )
+    },
+    {
+      title: '对象类型',
+      dataIndex: 'objectType',
+      render: (type: ObjectType) => <Tag>{type}</Tag>
+    },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_: any, record: PermissionMember) => (
+        <Button 
+          type="link" 
+          danger 
+          size="small" 
+          disabled={currentNodeConfig.mode === 'inherit' || selectedNodeKey === 'root'}
+          onClick={() => {
+            const newNodeMembers = currentNodeConfig.members.filter(m => m.id !== record.id);
+            setNodePermissions(prev => ({
+              ...prev,
+              [selectedNodeKey]: { ...currentNodeConfig, members: newNodeMembers }
+            }));
+          }}
+        >
+          移除
+        </Button>
+      )
+    }
+  ];
+
+  return (
+    <div style={{ display: 'flex', height: '100%' }}>
+      {/* Left Tree */}
+      <div style={{ 
+        width: '260px', 
+        borderRight: '1px solid #f0f0f0', 
+        padding: '16px', 
+        display: 'flex', 
+        flexDirection: 'column' 
+      }}>
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <Tree
+            showIcon
+            defaultExpandAll
+            onSelect={onSelect}
+            selectedKeys={[selectedNodeKey]}
+            treeData={treeData}
+            style={{ background: 'transparent' }}
+          />
+        </div>
+
+        {/* Legend and Stats */}
+        <div style={{ 
+          marginTop: '16px', 
+          padding: '12px', 
+          background: '#f8fafc', 
+          borderRadius: '8px', 
+          border: '1px solid #e2e8f0' 
+        }}>
+          <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#64748b' }}>
+            节点状态说明
+          </div>
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+            <Space size={8}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#52c41a' }} />
+              <Text type="secondary" style={{ fontSize: '11px' }}>继承模式</Text>
+            </Space>
+            <Space size={8}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#faad14' }} />
+              <Text type="secondary" style={{ fontSize: '11px' }}>单独设置</Text>
+            </Space>
+          </Space>
+          <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ fontSize: '11px' }}>脱离继承节点：</Text>
+              <Badge count={separateNodesCount} color="#faad14" size="small" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Settings */}
+      <div style={{ flex: 1, padding: '24px', background: '#f8fafc', overflowY: 'auto' }}>
+        <Space orientation="vertical" style={{ width: '100%' }} size={24}>
+           <div>
+             <Title level={5} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+               {selectedNodeKey === 'root' ? <DatabaseOutlined /> : <FolderOutlined />}
+               {selectedNodeKey === 'root' ? knowledgeBaseName : '目录权限配置'}
+             </Title>
+             <Text type="secondary" style={{ fontSize: '12px' }}>在此您可以精细化控制各级文件目录的访问权</Text>
+           </div>
+ 
+           {selectedNodeKey === 'root' && (
+             <Alert
+               title="配置建议"
+               description="若开启知识目录权限控制，可能会导致拥有知识库权限的用户提问/访问不到知识库中的某个文件夹。"
+               type="warning"
+               showIcon
+               style={{ borderRadius: '12px' }}
+             />
+           )}
+
+           {selectedNodeKey !== 'root' && (
+             <AntdCard size="small" title="权限模式" style={{ borderRadius: '12px' }}>
+               <Radio.Group 
+                 value={currentNodeConfig.mode} 
+                 onChange={(e) => {
+                   const mode = e.target.value;
+                   setNodePermissions(prev => ({
+                     ...prev,
+                     [selectedNodeKey]: { mode, members: mode === 'inherit' ? [] : [...inheritedMembers] }
+                   }));
+                 }}
+               >
+                 <Space orientation="vertical">
+                   <Radio value="inherit">
+                     <Space>
+                       继承父级
+                       <Tooltip title="自动同步上级目录的授权人员名单">
+                         <InfoCircleOutlined style={{ color: '#94a3b8' }} />
+                       </Tooltip>
+                     </Space>
+                   </Radio>
+                   <Radio value="separate">
+                     <Space>
+                       单独设置
+                       <Tooltip title="忽略上级继承，手动定义该目录及其子目录的可见名单">
+                         <InfoCircleOutlined style={{ color: '#94a3b8' }} />
+                       </Tooltip>
+                     </Space>
+                   </Radio>
+                 </Space>
+               </Radio.Group>
+             </AntdCard>
+           )}
+
+           <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+               <Text strong>授权人员名单</Text>
+               {currentNodeConfig.mode === 'separate' && (
+                 <Button type="primary" size="small" ghost icon={<UserAddOutlined />}>添加成员</Button>
+               )}
+             </div>
+
+             <Table
+               size="small"
+               rowKey="id"
+               columns={currentNodeConfig.mode === 'inherit' ? columns.slice(0, 2) : columns}
+               dataSource={currentNodeConfig.mode === 'inherit' ? inheritedMembers : currentNodeConfig.members}
+               pagination={false}
+               locale={{ emptyText: '该目录下暂无授权人员' }}
+             />
+
+             {selectedNodeKey === 'root' ? (
+               <div style={{ marginTop: '12px', padding: '8px 12px', background: '#f1f5f9', borderRadius: '6px' }}>
+                 <Space size={8}>
+                   <InfoCircleOutlined style={{ color: '#64748b' }} />
+                   <Text type="secondary" style={{ fontSize: '12px' }}>
+                     根目录的授权人员名单，请前往权限管理处进行设置。
+                   </Text>
+                 </Space>
+               </div>
+             ) : currentNodeConfig.mode === 'inherit' && (
+               <div style={{ marginTop: '12px', padding: '8px 12px', background: '#f1f5f9', borderRadius: '6px' }}>
+                 <Space size={8}>
+                   <InfoCircleOutlined style={{ color: '#64748b' }} />
+                   <Text type="secondary" style={{ fontSize: '12px' }}>
+                     当前为“继承模式”，人员名单随知识库总授权名单自动同步且不可编辑。
+                   </Text>
+                 </Space>
+               </div>
+             )}
+           </div>
+        </Space>
+      </div>
+    </div>
   );
 }
