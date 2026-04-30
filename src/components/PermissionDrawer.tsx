@@ -32,6 +32,7 @@ interface PermissionDrawerProps {
   resource: Resource | null;
   isOpen: boolean;
   onClose: () => void;
+  readOnly?: boolean;
 }
 
 export default function PermissionDrawer(props: PermissionDrawerProps) {
@@ -42,7 +43,7 @@ export default function PermissionDrawer(props: PermissionDrawerProps) {
   );
 }
 
-function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawerProps) {
+function PermissionDrawerContent({ resource, isOpen, onClose, readOnly }: PermissionDrawerProps) {
   const { message } = AntdApp.useApp();
   const [activeTab, setActiveTab] = useState('settings');
   const [mode, setMode] = useState<VisibilityMode>(resource?.visibilityMode || VisibilityMode.PUBLIC_VISIBLE);
@@ -207,7 +208,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
       render: (level: PermissionLevel, record: PermissionMember) => (
         <Select
           defaultValue={level}
-          disabled={level === PermissionLevel.OWNER}
+          disabled={readOnly || level === PermissionLevel.OWNER}
           variant="borderless"
           style={{ width: 100 }}
           onChange={(newLevel) => {
@@ -239,6 +240,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
               placeholder={isExpired ? "已过期" : "永久有效"}
               value={date ? dayjs(date) : null}
               status={isExpired ? 'error' : undefined}
+              disabled={readOnly}
               disabledDate={(current) => {
                 return current && current.isBefore(dayjs().startOf('day'));
               }}
@@ -283,7 +285,10 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
         </Space>
       ),
     },
-  ];
+  ].filter(col => {
+    if (readOnly && col.key === 'action') return false;
+    return true;
+  });
 
   if (!resource) return null;
 
@@ -302,16 +307,23 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
         onClose={onClose}
         open={isOpen}
         footer={
-          activeTab === 'settings' ? (
-            <div style={{ textAlign: 'right' }}>
-              <Button type="primary" size="large" onClick={() => {
-                message.success('全局策略已更新');
-                onClose();
-              }}>
-                保存
-              </Button>
-            </div>
-          ) : null
+          <div style={{ textAlign: 'right' }}>
+            <Space>
+              {readOnly ? (
+                <Button size="large" onClick={onClose}>关闭</Button>
+              ) : (
+                <>
+                  <Button size="large" onClick={onClose}>取消</Button>
+                  <Button type="primary" size="large" onClick={() => {
+                    message.success('配置已更新');
+                    onClose();
+                  }}>
+                    保存
+                  </Button>
+                </>
+              )}
+            </Space>
+          </div>
         }
         styles={{
           header: { borderBottom: '1px solid #f0f0f0', padding: '20px 24px' },
@@ -348,6 +360,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                       value={mode} 
                       onChange={(e) => setMode(e.target.value)}
                       style={{ width: '100%' }}
+                      disabled={readOnly}
                     >
                       <Space orientation="vertical" style={{ width: '100%' }} size={16}>
                         {[
@@ -383,7 +396,8 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                               border: `1px solid ${mode === item.mode ? '#2563eb' : '#e2e8f0'}`,
                               width: '100%',
                               display: 'block',
-                              background: 'white'
+                              background: 'white',
+                              cursor: readOnly ? 'default' : 'pointer'
                             }}
                           >
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'start' }}>
@@ -418,7 +432,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                             transition: 'all 0.2s',
                             opacity: isKnowledgePermissionEnabled ? 1 : 0.8
                           }}
-                          className={isKnowledgePermissionEnabled ? "hover:border-blue-400 hover:shadow-sm" : ""}
+                          className={!readOnly && isKnowledgePermissionEnabled ? "hover:border-blue-400 hover:shadow-sm" : ""}
                         >
                           <Space size={12}>
                             <ApartmentOutlined style={{ color: isKnowledgePermissionEnabled ? '#2563eb' : '#94a3b8', fontSize: '18px' }} />
@@ -440,6 +454,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                               size="small" 
                               checked={isKnowledgePermissionEnabled}
                               onChange={(val) => setIsKnowledgePermissionEnabled(val)}
+                              disabled={readOnly}
                             />
                             {isKnowledgePermissionEnabled && (
                               <Button 
@@ -492,18 +507,20 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                           options={Object.values(ObjectType).map(v => ({ label: v, value: v }))}
                         />
                       </Space>
-                      <Button 
-                        type="primary" 
-                        size="large" 
-                        icon={<UserAddOutlined />} 
-                        onClick={() => setIsAddObjectModalOpen(true)}
-                        style={{ borderRadius: '8px' }}
-                      >
-                        添加授权对象
-                      </Button>
+                      {!readOnly && (
+                        <Button 
+                          type="primary" 
+                          size="large" 
+                          icon={<UserAddOutlined />} 
+                          onClick={() => setIsAddObjectModalOpen(true)}
+                          style={{ borderRadius: '8px' }}
+                        >
+                          添加授权对象
+                        </Button>
+                      )}
                     </div>
 
-                    {selectedRowKeys.length > 0 && (
+                    {!readOnly && selectedRowKeys.length > 0 && (
                       <Alert
                         title={
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -529,13 +546,13 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                     )}
 
                     <Table
-                      rowSelection={{
+                      rowSelection={!readOnly ? {
                         selectedRowKeys,
                         onChange: setSelectedRowKeys,
                         getCheckboxProps: (record) => ({
                           disabled: record.level === PermissionLevel.OWNER,
                         }),
-                      }}
+                      } : undefined}
                       columns={columns}
                       dataSource={members.filter(m => {
                         const matchesSearch = m.name.toLowerCase().includes(memberSearchQuery.toLowerCase());
@@ -653,7 +670,7 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                             rowKey="id"
                             pagination={{ pageSize: 5 }}
                             style={{ background: 'white', borderRadius: '12px', overflow: 'hidden' }}
-                          />
+                           />
                       </section>
                    </Space>
                 </div>
@@ -746,7 +763,12 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
                 </div>
               )
             }
-          ]}
+          ].filter(item => {
+            if (readOnly) {
+              return item.key === 'settings' || item.key === 'members';
+            }
+            return true;
+          })}
         />
 
         {/* Modal: Transfer Ownership */}
@@ -1037,10 +1059,30 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
           styles={{
             body: { padding: 0 }
           }}
+          footer={
+            <div style={{ textAlign: 'right' }}>
+              <Space>
+                {readOnly ? (
+                  <Button onClick={() => setIsKnowledgeDrawerOpen(false)}>关闭</Button>
+                ) : (
+                  <>
+                    <Button onClick={() => setIsKnowledgeDrawerOpen(false)}>取消</Button>
+                    <Button type="primary" onClick={() => {
+                      message.success('目录权限配置已保存');
+                      setIsKnowledgeDrawerOpen(false);
+                    }}>
+                      确认
+                    </Button>
+                  </>
+                )}
+              </Space>
+            </div>
+          }
         >
           <KnowledgeCatalogPermissionManager 
             knowledgeBaseName={resource.name}
             allMembers={members}
+            readOnly={readOnly}
           />
         </Drawer>
       </Drawer>
@@ -1049,7 +1091,15 @@ function PermissionDrawerContent({ resource, isOpen, onClose }: PermissionDrawer
 }
 
 // Inner component for Knowledge Catalog Permission Management
-function KnowledgeCatalogPermissionManager({ knowledgeBaseName, allMembers }: { knowledgeBaseName: string, allMembers: PermissionMember[] }) {
+function KnowledgeCatalogPermissionManager({ 
+  knowledgeBaseName, 
+  allMembers,
+  readOnly
+}: { 
+  knowledgeBaseName: string, 
+  allMembers: PermissionMember[],
+  readOnly?: boolean
+}) {
   const [selectedNodeKey, setSelectedNodeKey] = useState<string>('root');
   const [nodePermissions, setNodePermissions] = useState<Record<string, { mode: 'inherit' | 'separate', members: PermissionMember[] }>>({});
 
@@ -1134,7 +1184,10 @@ function KnowledgeCatalogPermissionManager({ knowledgeBaseName, allMembers }: { 
         </Button>
       )
     }
-  ];
+  ].filter(col => {
+    if (readOnly && col.key === 'action') return false;
+    return true;
+  });
 
   return (
     <div style={{ display: 'flex', height: '100%' }}>
@@ -1212,6 +1265,7 @@ function KnowledgeCatalogPermissionManager({ knowledgeBaseName, allMembers }: { 
              <AntdCard size="small" title="权限模式" style={{ borderRadius: '12px' }}>
                <Radio.Group 
                  value={currentNodeConfig.mode} 
+                 disabled={readOnly}
                  onChange={(e) => {
                    const mode = e.target.value;
                    setNodePermissions(prev => ({
@@ -1245,7 +1299,7 @@ function KnowledgeCatalogPermissionManager({ knowledgeBaseName, allMembers }: { 
            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                <Text strong>授权人员名单</Text>
-               {currentNodeConfig.mode === 'separate' && (
+               {!readOnly && currentNodeConfig.mode === 'separate' && (
                  <Button type="primary" size="small" ghost icon={<UserAddOutlined />}>添加成员</Button>
                )}
              </div>

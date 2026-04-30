@@ -346,17 +346,19 @@ const AIOptimizeDrawer: React.FC<{
       onClose={onClose}
       open={open}
       destroyOnClose
-      extra={
-        <Space>
-          <Button onClick={onClose}>取消</Button>
-          <Button 
-            type="primary" 
-            disabled={phase === 'loading'} 
-            onClick={() => onConfirm(optimizedText)}
-          >
-            确认更新
-          </Button>
-        </Space>
+      footer={
+        <div style={{ textAlign: 'right' }}>
+          <Space>
+            <Button onClick={onClose}>取消</Button>
+            <Button 
+              type="primary" 
+              disabled={phase === 'loading'} 
+              onClick={() => onConfirm(optimizedText)}
+            >
+              确认更新
+            </Button>
+          </Space>
+        </div>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '20px' }}>
@@ -467,23 +469,25 @@ const BatchAIOptimizeDrawer: React.FC<{
       onClose={onClose}
       open={open}
       destroyOnClose
-      extra={
-        <Space>
-          <Button onClick={onClose}>关闭</Button>
-          <Button 
-            type="primary" 
-            disabled={status !== 'completed'} 
-            onClick={() => {
-              const updated = localTables.map(t => ({
-                ...t,
-                description: t.optimizationResult || t.description
-              }));
-              onConfirm(updated);
-            }}
-          >
-            应用全部更改
-          </Button>
-        </Space>
+      footer={
+        <div style={{ textAlign: 'right' }}>
+          <Space>
+            <Button onClick={onClose}>关闭</Button>
+            <Button 
+              type="primary" 
+              disabled={status !== 'completed'} 
+              onClick={() => {
+                const updated = localTables.map(t => ({
+                  ...t,
+                  description: t.optimizationResult || t.description
+                }));
+                onConfirm(updated);
+              }}
+            >
+              应用全部更改
+            </Button>
+          </Space>
+        </div>
       }
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 450px', gap: '20px', height: '100%' }}>

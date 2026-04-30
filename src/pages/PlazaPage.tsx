@@ -32,7 +32,7 @@ const typeIcons: Record<string, React.ReactNode> = {
   '知识图谱': <SettingOutlined />,
 };
 
-const plazaTabs = ['模型', '知识库', '工具', '自定义API', 'MCP', '工作流', '数据源', '文件库', '知识图谱'];
+const plazaTabs = ['模型', '知识库', '数据源', '文件库', '知识图谱', '工具', '自定义API', 'MCP', '工作流'];
 
 export default function PlazaPage() {
   const navigate = useNavigate();

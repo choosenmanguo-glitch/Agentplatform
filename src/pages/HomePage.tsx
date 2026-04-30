@@ -31,6 +31,13 @@ const HomePage: React.FC = () => {
       color: '#f6ffed'
     },
     {
+      title: '智能体广场管理',
+      description: '统一管理智能体分类、权限策略及上下架状态，维护广场生态',
+      icon: <SafetyCertificateOutlined style={{ fontSize: '24px', color: '#722ed1' }} />,
+      path: '/plaza-management',
+      color: '#f9f0ff'
+    },
+    {
       title: '智能问数配置',
       description: '智能体语义优化，包括表描述 AI 优化、批量治理及问数逻辑配置',
       icon: <RobotOutlined style={{ fontSize: '24px', color: '#faad14' }} />,

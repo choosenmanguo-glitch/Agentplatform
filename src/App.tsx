@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import ManagementPage from './pages/ManagementPage';
 import PlazaPage from './pages/PlazaPage';
 import SmartDataQueryPage from './pages/SmartDataQueryPage';
+import PlazaManagementPage from './pages/PlazaManagementPage';
 import HomePage from './pages/HomePage';
 
 const { Content } = Layout;
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/management" element={<ManagementPage />} />
             <Route path="/plaza" element={<PlazaPage />} />
             <Route path="/smart-query" element={<SmartDataQueryPage />} />
+            <Route path="/plaza-management" element={<PlazaManagementPage />} />
           </Routes>
         </BrowserRouter>
       </AntdApp>
