@@ -5,7 +5,8 @@ import {
   SafetyCertificateOutlined, 
   GlobalOutlined, 
   RobotOutlined,
-  RightOutlined
+  RightOutlined,
+  ApiOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -43,6 +44,13 @@ const HomePage: React.FC = () => {
       icon: <RobotOutlined style={{ fontSize: '24px', color: '#faad14' }} />,
       path: '/smart-query',
       color: '#fff7e6'
+    },
+    {
+      title: '连接天枢',
+      description: '支持连接天枢的文件集（用于快速导入知识库），支持连接天枢的数仓数据源（用于问数）',
+      icon: <ApiOutlined style={{ fontSize: '24px', color: '#13c2c2' }} />,
+      path: '/tianshu-connection',
+      color: '#e6fffb'
     }
   ];
 
